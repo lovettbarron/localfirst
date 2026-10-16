@@ -54,6 +54,40 @@ The model has about 32k tokens of working memory, and pi's own system prompt plu
 - Changes that span many files
 - Reading long docs and putting them together
 
+## Test run 2 (after the fix, same evening)
+
+The model was reloaded at 32k with `pi/AGENTS.md` in place. Each test ran in a fresh session. The most context either test used was 12.8k tokens, and nothing was truncated.
+
+| Test | Result | Context |
+|---|---|---|
+| Write `voicememo-NEEDS.md` from 3 named files | Passed; grounded in the sources, 41 lines | 12.8k |
+| Make `PEAK_BINS` a `peakBins` option, `node --check`, `git diff --stat` | Clean two-line diff; all 109 `npm test` tests pass | 6.6k |
+
+**It did these well:** searched with `rg` instead of browsing, made minimal edits, checked its work, wrote short summaries, never repeated a command, and stayed out of irrelevant matches (an old plan doc that also contained `PEAK_BINS`).
+
+**It got these wrong:**
+- **Relative paths.** "README.md" was read relative to `~/src`, and the model guessed the wrong folder. → Use absolute paths in prompts.
+- **Words that can mean more than one thing.** "Skills" meant pi skills. It listed code patterns instead and didn't ask. → Define terms like this in the prompt.
+- **Exact strings.** It wrote `PRIVATION:` for `PRIVACY:`. → Check anything it quotes.
+- **Judging itself.** It suggested "filesystem" and "shell" MCP servers, which pi already has. → Don't ask it what it's missing.
+- **Steps nobody asked for.** It didn't run `npm test` or the build. → Name the checks and follow-up steps.
+- **Soft rules.** It skipped "check the size first" twice when files were named explicitly. → Anything that *must* happen should be enforced by a tool, not by AGENTS.md.
+
+The best prompt shape is Test 2: **where** (absolute path) + **what** (the exact change) + **default/constraints** + **the command that proves it worked**.
+
+## Beyond code: where a local model fits
+
+Its strengths are privacy, zero per-token cost, running offline, and tasks that are narrow, repetitive and easy to check. Good fits:
+- **Support desk over your own tools,** like the `~/src/minecraft` agent. It works when the hard parts live in scripts (such as `tools/mc`) that return short, capped output, and the model just picks the command and explains the result.
+- **Private text:** journaling, health and fitness logs, finances, family notes. Summarise, tag, pull out to-dos. Nothing leaves the machine.
+- **Vault chores (Obsidian):** add frontmatter, propose tags, file Inbox notes into folders by a clear rule, summarise each day's notes.
+- **Structured extraction:** pull fields from receipts, emails or voice-memo transcripts into JSON. Use `response_format` with a schema, as the andrewlb.com capture job already does.
+- **Bulk transforms:** rename or reorganise files by a rule, clean up CSVs, convert formats. Check the result with a script.
+- **First-pass triage:** sort a log, crash report or inbox into "needs me" and "ignore", with one line of reason each.
+- **Drafts you'll edit anyway:** commit messages, changelogs, alt text, short replies.
+
+**Leave to Claude:** open design and product thinking, research, deciding what to build, and anything where the model's judgement *is* the product.
+
 ## Project AGENTS.md template (keep it under about 40 lines)
 
 ```markdown
